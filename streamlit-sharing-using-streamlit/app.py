@@ -105,7 +105,7 @@ with tab_classification:
         loan_purpose = st.text_input("Loan Purpose", "Working Capital")
         owner_education_level2 = st.selectbox(
             "Owner Education Level",
-            ["Primary", "Secondary", "Tertiary", "Postgraduate"], index=1, key="oel2")
+            ["Primary", "Secondary", "Certificate", "Bachelors","Masters", "Doctorate"], index=1, key="oel2")
         business_age_years2 = st.number_input("Business Age (years)", value=2.1, key="bay2")
         num_employees2 = st.number_input("Number of Employees", value=4, key="ne2")
         monthly_revenue_kes = st.number_input("Monthly Revenue (KES)", value=850000)
