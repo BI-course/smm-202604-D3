@@ -77,7 +77,7 @@ regression_pipeline = joblib.load(
 )
 
 classification_pipeline = joblib.load(
-    os.path.join(MODEL_DIR, "svc_classifier_for_sme_credit_risk.joblib")
+    os.path.join(MODEL_DIR, "invoice_payment_risk_final_pipeline.joblib")
 )
 
 clustering_artifact = joblib.load(
