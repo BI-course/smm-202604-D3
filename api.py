@@ -155,15 +155,23 @@ def predict_revenue():
 
 # Sample request (cURL):
 #   curl -X POST http://127.0.0.1:5000/api/v1/models/invoice_payment_risk_final_pipeline/predictions \
-#        -H "Content-Type: application/json" \
-#        -d '{"client_industry": "Manufacturing", "client_credit_rating": "Excellent", "client_company_size": "Medium",
-#             "payment_method": "Cheque", "has_dispute_history": "Yes",
-#             "collateral_or_guarantee": "Yes", "payment_terms": 90,
-#             "invoice_amount_kes": 114907, "client_relationship_years": 6.2,
-#             "prior_late_payments_count": 3, "discount_offered_pct": 1.65,
-#             "days_outstanding_avg_historical": 19.7, "guarantee_value_kes": 69619.1920055446,
-#             "economic_sector_growth_rate_pct": 1.42, "payment_risk_category": "Severely Late",
-#             }'
+# -H "Content-Type: application/json" \
+# -d '{
+#     "client_industry": "Manufacturing",
+#     "client_credit_rating": "Excellent",
+#     "client_company_size": "Medium",
+#     "payment_method": "Cheque",
+#     "has_dispute_history": "Yes",
+#     "collateral_or_guarantee": "Yes",
+#     "payment_terms": 90,
+#     "invoice_amount_kes": 114907,
+#     "client_relationship_years": 6.2,
+#     "prior_late_payments_count": 3,
+#     "discount_offered_pct": 1.65,
+#     "days_outstanding_avg_historical": 19.7,
+#     "guarantee_value_kes": 69619.1920055446,
+#     "economic_sector_growth_rate_pct": 1.42
+# }'
 #
 #
 # Note: collateral_value_kes is null here because "Working Capital" loans are
