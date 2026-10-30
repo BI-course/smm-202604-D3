@@ -214,26 +214,15 @@ def predict_customer_segment():
     })
 
 
-# 4. ASSOCIATION RULE MINING -- recommend products for a shopping cart
+# 4. ASSOCIATION RULE MINING -- recommend food menu items for an order cart
 
 # Sample request (cURL):
-#   curl -X POST http://127.0.0.1:5000/api/v1/models/ecommerce-recommender/predictions \
+#   curl -X POST http://127.0.0.1:5000/api/v1/models/food-delivery-recommender/predictions \
 #        -H "Content-Type: application/json" \
-#        -d '{"cart": ["H06", "H07"]}'
+#        -d '{"cart": ["F11", "F10"]}'
 #
-#   curl -X POST http://127.0.0.1:5000/api/v1/models/ecommerce-recommender/predictions \
-#        -H "Content-Type: application/json" \
-#        -d '{"cart": ["P04", "P01"]}'
-#
-# Note: there is no scikit-learn ".predict()" here -- the mined association
-# rules were precomputed into a lookup dictionary
-# (antecedent SKU-set -> ranked candidate consequents)
-# during the notebook's persistence stage. This
-# endpoint performs the exact same lookup+rank step a production recommender
-# microservice would perform on every incoming request; it does not mine
-# for the rules again.
-@app.route("/api/v1/models/ecommerce-recommender/predictions", methods=["POST"])
-def recommend_products():
+@app.route("/api/v1/models/food-delivery-recommender/predictions", methods=["POST"])
+def recommend_food_items():
     payload = request.get_json()
     cart = set(payload.get("cart", []))
     top_n = int(payload.get("top_n", 3))
@@ -249,7 +238,7 @@ def recommend_products():
     ranked = sorted(candidates.items(), key=lambda item: item[1][0], reverse=True)[:top_n]
     recommendations = [
         {
-            "sku": str(sku),
+            "item_id": str(sku),
             "product_name": sku_lookup.loc[sku, "product_name"],
             "confidence": round(float(confidence), 3),
             "lift": round(float(lift), 2),
@@ -260,7 +249,7 @@ def recommend_products():
     return jsonify({
         "cart": sorted(cart),
         "recommendations": recommendations,
-        "model": "Apriori association rules, cleaned + precomputed lookup",
+        "model": "Apriori association rules, food delivery menu lookup",
     })
 
 
