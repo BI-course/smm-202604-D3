@@ -87,7 +87,7 @@ clustering_scaler = clustering_artifact["scaler"]
 clustering_kmeans = clustering_artifact["kmeans"]
 
 arm_artifact = joblib.load(
-    os.path.join(MODEL_DIR, "apriori_recommendation_rules.joblib")
+    os.path.join(MODEL_DIR, "food_delivery_orders_apriori_recommendation_rules.joblib")
 )
 recommendation_lookup = arm_artifact["recommendation_lookup"]
 sku_lookup = arm_artifact["sku_lookup"]
