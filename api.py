@@ -79,6 +79,9 @@ regression_pipeline = joblib.load(
 classification_pipeline = joblib.load(
     os.path.join(MODEL_DIR, "invoice_payment_risk_final_pipeline.joblib")
 )
+label_encoder = joblib.load(
+    os.path.join(MODEL_DIR, "payment_risk_label_encoder.joblib")
+)
 
 clustering_artifact = joblib.load(
     os.path.join(MODEL_DIR, "kmeans_mall_customer_segmentation.joblib")
@@ -148,42 +151,53 @@ def predict_revenue():
     })
 
 
-# 2. CLASSIFICATION -- predict SME credit risk category (Low/Medium/High)
+# 2. CLASSIFICATION -- predict Invoice payment risk (Low/Medium/High)
 
 # Sample request (cURL):
-#   curl -X POST http://127.0.0.1:5000/api/v1/models/sme-credit-risk-classifier/predictions \
+#   curl -X POST http://127.0.0.1:5000/api/v1/models/invoice_payment_risk_final_pipeline/predictions \
 #        -H "Content-Type: application/json" \
-#        -d '{"sector": "Retail", "county": "Nairobi", "quarter": "Q2",
-#             "loan_purpose": "Working Capital", "owner_education_level": "Secondary",
-#             "business_age_years": 2.1, "num_employees": 4,
-#             "monthly_revenue_kes": 850000, "loan_amount_kes": 150000,
-#             "loan_term_months": 12, "interest_rate_pct": 16.5,
-#             "collateral_value_kes": null, "debt_to_income_ratio": 0.62,
-#             "credit_score": 590, "num_previous_loans": 1,
-#             "missed_payments_count": 3, "online_presence_score": 40.0,
-#             "customer_satisfaction_score": 3.4, "competitor_density": 6}'
+#        -d '{"client_industry": "Manufacturing", "client_credit_rating": "Excellent", "client_company_size": "Medium",
+#             "payment_method": "Cheque", "has_dispute_history": "Yes",
+#             "collateral_or_guarantee": "Yes", "payment_terms": 90,
+#             "invoice_amount_kes": 114907, "client_relationship_years": 6.2,
+#             "prior_late_payments_count": 3, "discount_offered_pct": 1.65,
+#             "days_outstanding_avg_historical": 19.7, "guarantee_value_kes": 69619.1920055446,
+#             "economic_sector_growth_rate_pct": 1.42, "payment_risk_category": "Severely Late",
+#             }'
 #
 #
 # Note: collateral_value_kes is null here because "Working Capital" loans are
 # more often unsecured (structural missingness, not missing at random) --
 # again, the pipeline's imputer + missingness indicator already handles this
 # internally; this route does not need special code for it.
-@app.route("/api/v1/models/sme-credit-risk-classifier/predictions", methods=["POST"])
-def predict_credit_risk():
+@app.route("/api/v1/models/invoice_payment_risk_final_pipeline/predictions", methods=["POST"])
+def predict_invoice_payment_risk():
     payload = request.get_json()
     input_row = pd.DataFrame([payload])
 
-    predicted_class = classification_pipeline.predict(input_row)[0]
+    # Get the numerical prediction
+    predicted_class_encoded = classification_pipeline.predict(input_row)[0]
+
+    # Convert numerical prediction back to original category
+    predicted_class = label_encoder.inverse_transform(
+        [predicted_class_encoded]
+    )[0]
+
+    # Get prediction probabilities
     predicted_probabilities = classification_pipeline.predict_proba(input_row)[0]
-    class_labels = classification_pipeline.named_steps["model"].classes_
+
+    # Convert numerical class labels back to original categories
+    class_labels = label_encoder.inverse_transform(
+        classification_pipeline.named_steps["model"].classes_
+    )
 
     return jsonify({
-        "predicted_credit_risk_category": str(predicted_class),
+        "predicted_invoice_payment_category": str(predicted_class),
         "class_probabilities": {
             str(label): round(float(prob), 4)
             for label, prob in zip(class_labels, predicted_probabilities)
         },
-        "model": "Support Vector Classifier (tuned, SMOTE-resampled at training only)",
+        "model": "Invoice Payment Risk Classifier",
     })
 
 
