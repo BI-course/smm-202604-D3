@@ -9,3 +9,4 @@ imblearn
 mlxtend
 flask
 flask-cors
+gunicorn==23.0.0
