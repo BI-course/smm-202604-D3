@@ -83,11 +83,11 @@ label_encoder = joblib.load(
     os.path.join(MODEL_DIR, "payment_risk_label_encoder.joblib")
 )
 
-clustering_artifact = joblib.load(
-    os.path.join(MODEL_DIR, "kmeans_mall_customer_segmentation.joblib")
+clustering_bundle = joblib.load(
+    os.path.join(MODEL_DIR, "farmer_segmentation_bundle.joblib")
 )
-clustering_scaler = clustering_artifact["scaler"]
-clustering_kmeans = clustering_artifact["kmeans"]
+clustering_pipeline = clustering_bundle["pipeline"]
+clustering_meta = clustering_bundle["metadata"]
 
 arm_artifact = joblib.load(
     os.path.join(MODEL_DIR, "food_delivery_orders_apriori_recommendation_rules.joblib")
@@ -209,30 +209,43 @@ def predict_invoice_payment_risk():
     })
 
 
-# 3. CLUSTERING -- assign a new mall customer to an existing segment
+# 3. CLUSTERING -- assign a new farmer to one of the three segments
 
 # Sample request (cURL):
-#   curl -X POST http://127.0.0.1:5000/api/v1/models/mall-customer-segmenter/predictions \
+#   curl -X POST http://127.0.0.1:5000/api/v1/models/farmer-segmenter/predictions \
 #        -H "Content-Type: application/json" \
-#        -d '{"Age": 27, "Annual Income (k$)": 45, "Spending Score (1-100)": 72}'
+#        -d '{"farm_size_acres": 2.5, "annual_yield_tonnes": 8,
+#             "income_per_acre_kes": 28000, "years_farming_experience": 6,
+#             "market_access_score": 50}'
 #
-# Note: unlike the two Pipelines above, K-Means does not bundle its own
-# scaler, so this is the one endpoint where the scaling step is applied
-# explicitly (scaler.transform(...) then kmeans.predict(...)) -- exactly the
-# two-object pattern the clustering notebook persisted together for this
-# reason. There is still no manual encoding or feature engineering: the
-# three numeric fields are used exactly as the client sends them.
-@app.route("/api/v1/models/mall-customer-segmenter/predictions", methods=["POST"])
-def predict_customer_segment():
-    payload = request.get_json()
-    input_row = pd.DataFrame([payload])
+# Note: market_access_score may be null. The saved pipeline imputes it with
+# the training median. The other four fields are required.
+@app.route("/api/v1/models/farmer-segmenter/predictions", methods=["POST"])
+def predict_farmer_segment():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Request body must be a JSON object."}), 400
 
-    scaled_input = clustering_scaler.transform(input_row)
-    assigned_cluster = int(clustering_kmeans.predict(scaled_input)[0])
+    features = clustering_meta["numeric_features"]
+
+    # Everything except market_access_score is required
+    required = [f for f in features if f != "market_access_score"]
+    missing = [f for f in required if payload.get(f) is None]
+    if missing:
+        return jsonify({"error": "Missing required field(s)", "missing": missing}), 400
+
+    try:
+        # reindex forces the exact column order the model was trained with
+        input_row = pd.DataFrame([payload]).reindex(columns=features).astype(float)
+    except (ValueError, TypeError):
+        return jsonify({"error": "All fields must be numbers."}), 400
+
+    assigned_cluster = int(clustering_pipeline.predict(input_row)[0])
 
     return jsonify({
         "assigned_cluster": assigned_cluster,
-        "model": "K-Means (k=5, standardized features)",
+        "segment_name": clustering_meta["cluster_names"][assigned_cluster],
+        "model": "K-Means (k=3, imputed and standardized features)",
     })
 
 
