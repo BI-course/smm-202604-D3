@@ -38,11 +38,11 @@
 
 **Member 5:**
 
-| **Details**                                                                                                                           | **Comment** |
-|:--------------------------------------------------------------------------------------------------------------------------------------|:------------|
-| **Student ID**                                                                                                                        |             |
-| **Name**                                                                                                                              |             |
-| **What part of the lab did you personally<br/>contribute to (provide a link to the<br/>branch(es)), and what did you learn from it?** |             |
+| **Details**                                                                                                                           | **Comment**   |
+|:--------------------------------------------------------------------------------------------------------------------------------------|:--------------|
+| **Student ID**                                                                                                                        | 151189        |
+| **Name**                                                                                                                              | SABIAN HASSAN |
+| **What part of the lab did you personally<br/>contribute to (provide a link to the<br/>branch(es)), and what did you learn from it?** | I built the clustering endpoint in api.py. It loads our saved K-Means model and tells you which farmer segment a new farmer belongs to. It also handles missing inputs with clear errors. I also pinned scikit-learn to 1.6.1 so all our models load the same way.<br/>Branch: https://github.com/BI-course/smm-202604-D3/tree/sabian-clustering<br/>What I learned: the scikit-learn version used to save a model must match the version that loads it, or the API can break.              |
 
 ## Chosen Level of Difficulty
 
