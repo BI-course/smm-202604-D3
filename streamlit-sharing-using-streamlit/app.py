@@ -13,29 +13,40 @@ import os
 # -----------------------------------------------------------------------
 @st.cache_resource
 def load_artifacts():
-    # regression_pipeline = joblib.load("lasso_regressor_for_sme_revenue.joblib")
-    # classification_pipeline = joblib.load("svc_classifier_for_sme_credit_risk.joblib")
-    # clustering_artifact = joblib.load("kmeans_mall_customer_segmentation.joblib")
-    # arm_artifact = joblib.load("apriori_recommendation_rules.joblib")
-    MODEL_DIR = "./model"
+    # Dynamically locate the model folder relative to app.py
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    MODEL_DIR = os.path.join(BASE_DIR, "..", "model")
 
+    # 1. Regression (Farm Income)
     regression_pipeline = joblib.load(
-        os.path.join(MODEL_DIR, "lasso_regressor_for_sme_revenue.joblib")
+        os.path.join(MODEL_DIR, "farm_income_linear_regression_pipeline.joblib")
     )
 
-    classification_pipeline = joblib.load(
-        os.path.join(MODEL_DIR, "svc_classifier_for_sme_credit_risk.joblib")
-    )
+    # 2. Classification (Invoice Payment Risk)
+    try:
+        classification_pipeline = joblib.load(
+            os.path.join(MODEL_DIR, "invoice_payment_risk_final_pipeline.joblib")
+        )
+    except Exception:
+        classification_pipeline = None
 
-    clustering_artifact = joblib.load(
-        os.path.join(MODEL_DIR, "kmeans_mall_customer_segmentation.joblib")
-    )
+    # 3. Clustering (Mall Customer Segmentation)
+    try:
+        clustering_artifact = joblib.load(
+            os.path.join(MODEL_DIR, "kmeans_mall_customer_segmentation.joblib")
+        )
+    except Exception:
+        clustering_artifact = None
 
-    arm_artifact = joblib.load(
-        os.path.join(MODEL_DIR, "apriori_recommendation_rules.joblib")
-    )
+    # 4. Association Rule Mining (Food Delivery)
+    try:
+        arm_artifact = joblib.load(
+            os.path.join(MODEL_DIR, "food_delivery_orders_apriori_recommendation_rules.joblib")
+        )
+    except Exception:
+        arm_artifact = None
+
     return regression_pipeline, classification_pipeline, clustering_artifact, arm_artifact
-
 regression_pipeline, classification_pipeline, clustering_artifact, arm_artifact = load_artifacts()
 clustering_scaler = clustering_artifact["scaler"]
 clustering_kmeans = clustering_artifact["kmeans"]
@@ -55,44 +66,43 @@ tab_regression, tab_classification, tab_clustering, tab_arm = st.tabs([
 # -----------------------------------------------------------------------
 with tab_regression:
     with st.form("regression_form"):
-        sector = st.text_input("Sector", "Technology")
-        county = st.text_input("County", "Nairobi")
-        quarter = st.text_input("Quarter", "Q3")
-        business_age_years = st.number_input("Business Age (years)", value=4.5)
-        num_employees = st.number_input("Number of Employees", value=12)
-        # These four categories are the exact set the pipeline's
-        # OrdinalEncoder was fitted on.
-        owner_education_level = st.selectbox(
-            "Owner Education Level",
-            ["Primary", "Secondary", "Certificate", "Bachelors","Masters", "Doctorate"], index=1)
-        monthly_marketing_spend_kes = st.number_input("Monthly Marketing Spend (KES)", value=45000)
-        avg_daily_foot_traffic = st.number_input(
-            "Avg Daily Foot Traffic (leave 0 if not applicable)", value=0)
-        online_presence_score = st.number_input("Online Presence Score", value=78.0)
-        loan_amount_kes = st.number_input("Loan Amount (KES)", value=250000)
-        interest_rate_pct = st.number_input("Interest Rate (%)", value=14.5)
-        inflation_rate_pct = st.number_input("Inflation Rate (%)", value=6.5)
-        competitor_density = st.number_input("Competitor Density", value=5)
-        customer_satisfaction_score = st.number_input("Customer Satisfaction Score", value=4.2)
-        submitted = st.form_submit_button("Predict Revenue")
+        soil_quality_score = st.number_input("Soil Quality Score", value=7.8)
+        farm_size_acres = st.number_input("Farm Size (Acres)", value=5.5)
+        years_farming_experience = st.number_input("Years Farming Experience", value=14.0)
+        num_workers_employed = st.number_input("Number of Workers Employed", value=4)
+        rainfall_mm = st.number_input("Rainfall (mm)", value=1100.0)
+        market_distance_km = st.number_input("Market Distance (km)", value=12.5)
+        machinery_value_kes = st.number_input("Machinery Value (KES)", value=450000.0)
+        fertilizer_spend_kes = st.number_input("Fertilizer Spend (KES)", value=65000.0)
+        pesticide_spend_kes = st.number_input("Pesticide Spend (KES)", value=35000.0)
+        irrigation_maintenance_cost_kes = st.number_input("Irrigation Maintenance Cost (KES)", value=25000.0)
+        crop_type = st.selectbox("Crop Type", ["Horticulture", "Tea", "Maize", "Coffee", "Wheat"])
+        county = st.text_input("County", "Nakuru")
+        irrigation_type = st.selectbox("Irrigation Type", ["Drip", "Manual", "Rain-fed", "Sprinkler"])
+        cooperative_member = st.selectbox("Cooperative Member", ["Yes", "No"])
+        submitted = st.form_submit_button("Predict Annual Income")
 
     if submitted:
         payload = {
-            "sector": sector, "county": county, "quarter": quarter,
-            "business_age_years": business_age_years, "num_employees": num_employees,
-            "owner_education_level": owner_education_level,
-            "monthly_marketing_spend_kes": monthly_marketing_spend_kes,
-            "avg_daily_foot_traffic": avg_daily_foot_traffic or None,
-            "online_presence_score": online_presence_score,
-            "loan_amount_kes": loan_amount_kes, "interest_rate_pct": interest_rate_pct,
-            "inflation_rate_pct": inflation_rate_pct,
-            "competitor_density": competitor_density,
-            "customer_satisfaction_score": customer_satisfaction_score,
+            "soil_quality_score": soil_quality_score,
+            "farm_size_acres": farm_size_acres,
+            "years_farming_experience": years_farming_experience,
+            "num_workers_employed": num_workers_employed,
+            "rainfall_mm": rainfall_mm,
+            "market_distance_km": market_distance_km,
+            "machinery_value_kes": machinery_value_kes,
+            "fertilizer_spend_kes": fertilizer_spend_kes,
+            "pesticide_spend_kes": pesticide_spend_kes,
+            "irrigation_maintenance_cost_kes": irrigation_maintenance_cost_kes,
+            "crop_type": crop_type,
+            "county": county,
+            "irrigation_type": irrigation_type,
+            "cooperative_member": cooperative_member,
         }
         input_row = pd.DataFrame([payload])
-        predicted_log_revenue = regression_pipeline.predict(input_row)[0]
-        predicted_revenue_kes = float(np.expm1(predicted_log_revenue))
-        st.success(f"Predicted monthly revenue: KES {predicted_revenue_kes:,.2f}")
+        # Your pipeline handles preprocessing & returns prediction directly in KES
+        predicted_revenue_kes = float(regression_pipeline.predict(input_row)[0])
+        st.success(f"Predicted annual farm income: KES {predicted_revenue_kes:,.2f}")
 
 # -----------------------------------------------------------------------
 # 2. Classification
