@@ -26,7 +26,7 @@ Run this file directly to start a local development server:
 """
 
 import os
-
+import numpy as np
 import joblib
 import pandas as pd
 from flask import Flask, jsonify, request
@@ -70,10 +70,11 @@ CORS(app, resources={r"/api/*": {"origins": [
 # single API call, which is slow and pointless -- the fitted model never
 # changes while the server is running.
 # -----------------------------------------------------------------------
-MODEL_DIR = "./model"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(BASE_DIR, "model")
 
 regression_pipeline = joblib.load(
-    os.path.join(MODEL_DIR, "lasso_regressor_for_sme_revenue.joblib")
+    os.path.join(MODEL_DIR, "farm_income_linear_regression_pipeline.joblib")
 )
 
 classification_pipeline = joblib.load(
@@ -128,7 +129,7 @@ print("All the four artifacts have been loaded. The API is ready.")
 # business (fully online -- foot traffic is structurally not applicable, not
 # missing at random). The pipeline's own imputer handles the null value; nothing
 # in this file needs to know that rule.
-@app.route("/api/v1/models/sme-revenue-regressor/predictions", methods=["POST"])
+@app.route("/api/v1/models/farm-income-regressor/predictions", methods=["POST"])
 def predict_revenue():
     payload = request.get_json()
 
@@ -138,12 +139,8 @@ def predict_revenue():
     # and how to preprocess each one.
     input_row = pd.DataFrame([payload])
 
-    predicted_log_revenue = regression_pipeline.predict(input_row)[0]
-    # The pipeline was trained on log1p(revenue) because revenue was
-    # right-skewed; we invert that single transformation here to report the
-    # predictions in KES.
-    import numpy as np
-    predicted_revenue_kes = float(np.expm1(predicted_log_revenue))
+    # Get the raw prediction from the Farm Income model
+    predicted_revenue_kes = float(regression_pipeline.predict(input_row)[0])
 
     return jsonify({
         "predicted_monthly_revenue_kes": round(predicted_revenue_kes, 2),
@@ -296,7 +293,7 @@ if __name__ == "__main__":
     # debugger on errors -- convenient in class, but NEVER use debug=True in
     # a deployed/public environment (it can expose a remote code execution
     # console to anyone who can reach the server).
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
 
     # Production-style alternative (no debugger, no auto-reload):
     # app.run(debug=False, host="0.0.0.0", port=5000)
