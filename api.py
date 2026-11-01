@@ -129,6 +129,7 @@ print("All the four artifacts have been loaded. The API is ready.")
 # business (fully online -- foot traffic is structurally not applicable, not
 # missing at random). The pipeline's own imputer handles the null value; nothing
 # in this file needs to know that rule.
+
 @app.route("/api/v1/models/farm-income-regressor/predictions", methods=["POST"])
 def predict_revenue():
     payload = request.get_json()
