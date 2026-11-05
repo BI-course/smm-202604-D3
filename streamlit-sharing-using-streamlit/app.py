@@ -27,16 +27,20 @@ def load_artifacts():
         classification_pipeline = joblib.load(
             os.path.join(MODEL_DIR, "invoice_payment_risk_final_pipeline.joblib")
         )
-    except Exception:
-        classification_pipeline = None
-
-    # 3. Clustering (Mall Customer Segmentation)
-    try:
-        clustering_artifact = joblib.load(
-            os.path.join(MODEL_DIR, "kmeans_mall_customer_segmentation.joblib")
+        payment_risk_label_encoder = joblib.load(
+            os.path.join(MODEL_DIR, "payment_risk_label_encoder.joblib")
         )
     except Exception:
-        clustering_artifact = None
+        classification_pipeline = None
+        payment_risk_label_encoder = None
+
+    # 3. Clustering (Farmer Segmentation)
+    try:
+        clustering_bundle = joblib.load(
+            os.path.join(MODEL_DIR, "farmer_segmentation_bundle.joblib")
+        )
+    except Exception:
+        clustering_bundle = None
 
     # 4. Association Rule Mining (Food Delivery)
     try:
@@ -46,10 +50,12 @@ def load_artifacts():
     except Exception:
         arm_artifact = None
 
-    return regression_pipeline, classification_pipeline, clustering_artifact, arm_artifact
-regression_pipeline, classification_pipeline, clustering_artifact, arm_artifact = load_artifacts()
-clustering_scaler = clustering_artifact["scaler"]
-clustering_kmeans = clustering_artifact["kmeans"]
+    return (regression_pipeline, classification_pipeline, payment_risk_label_encoder,
+            clustering_bundle, arm_artifact)
+(regression_pipeline, classification_pipeline, payment_risk_label_encoder,
+ clustering_bundle, arm_artifact) = load_artifacts()
+clustering_pipeline = clustering_bundle["pipeline"]
+clustering_cluster_names = clustering_bundle["metadata"]["cluster_names"]
 recommendation_lookup = arm_artifact["recommendation_lookup"]
 sku_lookup = arm_artifact["sku_lookup"]
 
@@ -109,50 +115,34 @@ with tab_regression:
 # -----------------------------------------------------------------------
 with tab_classification:
     with st.form("classification_form"):
-        sector2 = st.text_input("Sector", "Retail")
-        county2 = st.text_input("County", "Nairobi")
-        quarter2 = st.text_input("Quarter", "Q2")
-        loan_purpose = st.text_input("Loan Purpose", "Working Capital")
-        owner_education_level2 = st.selectbox(
-            "Owner Education Level",
-            ["Primary", "Secondary", "Certificate", "Bachelors","Masters", "Doctorate"], index=1, key="oel2")
-        business_age_years2 = st.number_input("Business Age (years)", value=2.1, key="bay2")
-        num_employees2 = st.number_input("Number of Employees", value=4, key="ne2")
-        monthly_revenue_kes = st.number_input("Monthly Revenue (KES)", value=850000)
-        loan_amount_kes2 = st.number_input("Loan Amount (KES)", value=150000, key="lak2")
-        loan_term_months = st.number_input("Loan Term (months)", value=12)
-        interest_rate_pct2 = st.number_input("Interest Rate (%)", value=16.5, key="irp2")
-        collateral_value_kes = st.number_input("Collateral Value (leave 0 if unsecured)", value=0)
-        debt_to_income_ratio = st.number_input("Debt-to-Income Ratio", value=0.62)
-        credit_score = st.number_input("Credit Score", value=590)
-        num_previous_loans = st.number_input("Number of Previous Loans", value=1)
-        missed_payments_count = st.number_input("Missed Payments Count", value=3)
-        online_presence_score2 = st.number_input("Online Presence Score", value=40.0, key="ops2")
-        customer_satisfaction_score2 = st.number_input(
-            "Customer Satisfaction Score", value=3.4, key="css2")
-        competitor_density2 = st.number_input("Competitor Density", value=6, key="cd2")
-        submitted2 = st.form_submit_button("Predict Credit Risk")
+        invoice_amount_kes = st.number_input("Invoice Amount (KES)", value=120000.0, key="iak2")
+        guarantee_value_kes = st.number_input("Guarantee Value (KES)", value=50000.0, key="gvk2")
+        days_outstanding_avg_historical = st.number_input(
+            "Avg. Days Outstanding (Historical)", value=15.0, key="doah2")
+        client_credit_rating = st.selectbox(
+            "Client Credit Rating", ["Poor", "Fair", "Good", "Excellent"], index=2, key="ccr2")
+        has_dispute_history = st.selectbox(
+            "Has Dispute History", ["No", "Yes"], index=0, key="hdh2")
+        submitted2 = st.form_submit_button("Predict Payment Risk")
 
     if submitted2:
         payload = {
-            "sector": sector2, "county": county2, "quarter": quarter2,
-            "loan_purpose": loan_purpose, "owner_education_level": owner_education_level2,
-            "business_age_years": business_age_years2, "num_employees": num_employees2,
-            "monthly_revenue_kes": monthly_revenue_kes, "loan_amount_kes": loan_amount_kes2,
-            "loan_term_months": loan_term_months, "interest_rate_pct": interest_rate_pct2,
-            "collateral_value_kes": collateral_value_kes or None,
-            "debt_to_income_ratio": debt_to_income_ratio, "credit_score": credit_score,
-            "num_previous_loans": num_previous_loans,
-            "missed_payments_count": missed_payments_count,
-            "online_presence_score": online_presence_score2,
-            "customer_satisfaction_score": customer_satisfaction_score2,
-            "competitor_density": competitor_density2,
+            "invoice_amount_kes": invoice_amount_kes,
+            "guarantee_value_kes": guarantee_value_kes,
+            "days_outstanding_avg_historical": days_outstanding_avg_historical,
+            "client_credit_rating": client_credit_rating,
+            "has_dispute_history": has_dispute_history,
         }
         input_row = pd.DataFrame([payload])
-        predicted_class = classification_pipeline.predict(input_row)[0]
+        # The model was trained on a label-encoded target (0/1/2), so decode
+        # the prediction back to its readable class name via the saved encoder.
+        predicted_class_encoded = classification_pipeline.predict(input_row)[0]
+        predicted_class = payment_risk_label_encoder.inverse_transform(
+            [predicted_class_encoded])[0]
         predicted_probabilities = classification_pipeline.predict_proba(input_row)[0]
-        class_labels = classification_pipeline.named_steps["model"].classes_
-        st.success(f"Predicted credit risk category: {predicted_class}")
+        class_labels = payment_risk_label_encoder.inverse_transform(
+            classification_pipeline.named_steps["model"].classes_)
+        st.success(f"Predicted invoice payment risk: {predicted_class}")
         st.write({str(label): round(float(prob), 4)
                   for label, prob in zip(class_labels, predicted_probabilities)})
 
@@ -161,20 +151,26 @@ with tab_classification:
 # -----------------------------------------------------------------------
 with tab_clustering:
     with st.form("clustering_form"):
-        age = st.number_input("Age", min_value=1, max_value=100, value=27)
-        annual_income_k = st.number_input("Annual Income (k$)", min_value=0.0, value=45.0)
-        spending_score = st.number_input("Spending Score (1-100)", min_value=1, max_value=100, value=72)
+        farm_size_acres3 = st.number_input("Farm Size (Acres)", value=3.6, key="fsa3")
+        annual_yield_tonnes3 = st.number_input("Annual Yield (Tonnes)", value=9.8, key="ayt3")
+        income_per_acre_kes3 = st.number_input("Income per Acre (KES)", value=39000.0, key="ipak3")
+        years_farming_experience3 = st.number_input(
+            "Years Farming Experience", value=9.0, key="yfe3")
+        market_access_score3 = st.number_input(
+            "Market Access Score (0-100)", min_value=0.0, max_value=100.0, value=53.0, key="mas3")
         submitted3 = st.form_submit_button("Predict Segment")
 
     if submitted3:
         input_row = pd.DataFrame([{
-            "Age": age,
-            "Annual Income (k$)": annual_income_k,
-            "Spending Score (1-100)": spending_score,
+            "farm_size_acres": farm_size_acres3,
+            "annual_yield_tonnes": annual_yield_tonnes3,
+            "income_per_acre_kes": income_per_acre_kes3,
+            "years_farming_experience": years_farming_experience3,
+            "market_access_score": market_access_score3,
         }])
-        scaled_input = clustering_scaler.transform(input_row)
-        cluster = int(clustering_kmeans.predict(scaled_input)[0])
-        st.success(f"Assigned segment: Cluster {cluster}")
+        cluster = int(clustering_pipeline.predict(input_row)[0])
+        cluster_name = clustering_cluster_names.get(cluster, f"Cluster {cluster}")
+        st.success(f"Assigned segment: {cluster_name}")
 
 # -----------------------------------------------------------------------
 # 4. Association Rule Mining
