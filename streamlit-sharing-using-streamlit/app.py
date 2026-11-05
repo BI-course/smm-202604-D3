@@ -177,7 +177,7 @@ with tab_clustering:
 # -----------------------------------------------------------------------
 with tab_arm:
     with st.form("arm_form"):
-        cart_text = st.text_input("Cart (comma-separated SKUs)", "H06, H07")
+        cart_text = st.text_input("Cart (comma-separated SKUs)", "F10, F11")
         top_n = st.number_input("Top N Recommendations", min_value=1, value=3)
         submitted4 = st.form_submit_button("Get Recommendations")
 
