@@ -57,8 +57,8 @@ st.set_page_config(page_title="BBT 4206 Model Validation Demos", page_icon="\U00
 st.title("BBT 4206 -- Model Validation Demos")
 
 tab_regression, tab_classification, tab_clustering, tab_arm = st.tabs([
-    "SME Revenue Regressor", "SME Credit Risk Classifier",
-    "Mall Customer Segmenter", "E-commerce Recommender",
+    "Farm Annual Income Predictor", "Invoice Payment Risk Classifier",
+    "Farmer Segmenter", "Food Delivery Order Recommender",
 ])
 
 # -----------------------------------------------------------------------
