@@ -14,11 +14,11 @@
 
 **Member 2:**
 
-| **Details**                                                                                                                           | **Comment** |
-|:--------------------------------------------------------------------------------------------------------------------------------------|:------------|
-| **Student ID**                                                                                                                        |             |
-| **Name**                                                                                                                              |             |
-| **What part of the lab did you personally<br/>contribute to (provide a link to the<br/>branch(es)), and what did you learn from it?** |             |
+| **Details**                                                                                                                           | **Comment**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+|:--------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Student ID**                                                                                                                        | 166469                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **Name**                                                                                                                              | Sandra Muthiani                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **What part of the lab did you personally<br/>contribute to (provide a link to the<br/>branch(es)), and what did you learn from it?** | I worked on the classification model API endpoint to enable predictions through structured API requests.<br/> I also worked on creating and deploying a Hugging Face Gradio application together with Brian. <br/> What I learnt was how to troubleshoot deployment and compatibility errors by adjusting the Scikit-learn version to match the model requirements, updating the Hugging Face requirements.txt file, and removing specified version constraints for mlxtend and imbalanced-learn.<br/> Branch: https://github.com/BI-course/smm-202604-D3/commits/main/ - This is the link to the main branch, instead of pushing to my feature branch, I accidentally pushed to the main branch, but I have provided the link to the commits. |
 
 **Member 3:**
 
@@ -68,11 +68,11 @@ Note that you are required to submit the link to the video and NOT the video its
 
 Fill in only the rows that apply to your chosen difficulty level (see Part C below). Leave a row blank if your tier does not require that deployment target.
 
-| **Deployment target**                             | **URL** |
-|:--------------------------------------------------|:--------|
-| Render (the full `api.py`, all endpoints)         |         |
-| Hugging Face Space (Gradio, one tab per model)    |         |
-| Streamlit Community Cloud app (one tab per model) |         |
+| **Deployment target**                             | **URL**                                                  |
+|:--------------------------------------------------|:---------------------------------------------------------|
+| Render (the full `api.py`, all endpoints)         | https://smm-202604-d3.onrender.com/                                                         |
+| Hugging Face Space (Gradio, one tab per model)    | https://huggingface.co/spaces/Muthyy/smm-202604-d3       |
+| Streamlit Community Cloud app (one tab per model) | https://smm-202604-d3.streamlit.app/                     |
 
 ---
 
