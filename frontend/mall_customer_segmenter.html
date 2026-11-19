@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mall Customer Segmenter</title>
+<title>Farmer Segmenter</title>
 <style>
   :root {
     --accent: #7c3aed;
@@ -137,113 +137,183 @@
   <div class="card">
     <a class="back-link" href="index.html">&larr; All endpoints</a>
     <span class="badge">Clustering</span>
-    <h1>Mall Customer Segment Assignment</h1>
-    <p class="lead">Calls <code>POST /api/v1/models/mall-customer-segmenter/predictions</code></p>
+    <h1>Farmer Segmenter</h1>
+    <p class="lead">Calls <code>POST /api/v1/models/farmer-segmenter/predictions</code></p>
 
-    <form id="predictForm">
-      <label for="age">Age</label>
-      <input type="number" id="age" value="27" required>
+  <form id="predictForm">
+    <label for="farm_size_acres">Farm Size (Acres)</label>
+    <input type="number" id="farm_size_acres"
+           value="3.6" min="0" step="any" required>
 
-      <label for="income">Annual Income (k$)</label>
-      <input type="number" id="income" value="45" required>
+    <label for="annual_yield_tonnes">Annual Yield (Tonnes)</label>
+    <input type="number" id="annual_yield_tonnes"
+           value="9.8" min="0" step="any" required>
 
-      <label for="spending">Spending Score (1-100)</label>
-      <input type="number" id="spending" min="1" max="100" value="72" required>
+    <label for="income_per_acre_kes">Income per Acre (KES)</label>
+    <input type="number" id="income_per_acre_kes"
+           value="39000" min="0" step="any" required>
 
-      <button type="submit" id="submitBtn">Assign Segment</button>
-    </form>
+    <label for="years_farming_experience">Years Farming Experience</label>
+    <input type="number" id="years_farming_experience"
+           value="9" min="0" step="any" required>
 
+    <label for="market_access_score">Market Access Score (0-100)</label>
+    <input type="number" id="market_access_score"
+           value="53" min="0" max="100" step="any" required>
+
+    <button type="submit" id="submitBtn">Predict Segment</button>
+  </form>
     <div id="result"></div>
   </div>
 
 <script>
-  const protocol = window.location.protocol;                 // "http:", "https:", or "file:"
-  const hostname = window.location.hostname || "127.0.0.1";  // hostname is "" for a file:// page
-  const isSecure = protocol === "https:";
+const protocol = window.location.protocol;
+const hostname = window.location.hostname || "127.0.0.1";
+const isSecure = protocol === "https:";
 
-  const API_ORIGIN = `${isSecure ? "https" : "http"}://${hostname}:${isSecure ? "443" : "5000"}`;
-  const API_URL = `${API_ORIGIN}/api/v1/models/mall-customer-segmenter/predictions`;
+const API_ORIGIN = `${isSecure ? "https" : "http"}://${hostname}:${isSecure ? "443" : "5000"}`;
 
-  // const API_URL = "http://127.0.0.1:5000/api/v1/models/mall-customer-segmenter/predictions";
+const API_URL = `${API_ORIGIN}/api/v1/models/farmer-segmenter/predictions`;
 
-  // Business-facing profile for each cluster id the K-Means model can
-  // return. This is reference material for a decision maker, so it only
-  // appears once a prediction has actually run -- shown here, not buried
-  // in the form, and with the matching cluster visually picked out.
-  const SEGMENT_PROFILES = {
-    0: { name: "Premium targets", stats: "Young (~33) &middot; High income &middot; High spending",
-         note: "Young, affluent, high spenders" },
-    1: { name: "Average, mature customers", stats: "Older (~56) &middot; Mid income &middot; Mid spending",
-         note: "Steady, middle-of-the-road behavior" },
-    2: { name: "High income, low engagement", stats: "Middle-aged (~40) &middot; High income &middot; Low spending",
-         note: "Affluent but currently untapped" },
-    3: { name: "Frugal / budget-conscious", stats: "Older (~46) &middot; Low income &middot; Low spending",
-         note: "Price-sensitive, low discretionary spend" },
-    4: { name: "Young enthusiastic spenders", stats: "Young (~25) &middot; Low-mid income &middot; High spending",
-         note: "High spending relative to income" },
-  };
+const SEGMENT_PROFILES = {
+    0: {
+        name: "Resource-Constrained Smallholders",
+        note: "Smallholder farmers operating with relatively limited resources."
+    },
+    1: {
+        name: "Commercial High-Yield Operators",
+        note: "Commercial farming operations characterised by high production."
+    },
+    2: {
+        name: "Emerging Mid-Scale Producers",
+        note: "Farmers operating at an emerging mid-scale level."
+    }
+};
 
-  function renderSegmentProfiles(assignedCluster) {
-    const rows = Object.entries(SEGMENT_PROFILES).map(([clusterId, profile]) => {
-      const isMatch = Number(clusterId) === assignedCluster;
-      return `
-        <div class="segment-row${isMatch ? " matched" : ""}">
-          <div class="cluster-id">${clusterId}</div>
-          <div>
-            <div class="name">${profile.name}</div>
-            <div class="stats">${profile.stats}</div>
-          </div>
-        </div>`;
-    }).join("");
-    return `<div class="segment-profiles">${rows}</div>`;
-  }
+function renderSegmentProfiles(assignedCluster) {
+    const container = document.createElement("div");
+    container.className = "segment-profiles";
 
-  document.getElementById("predictForm").addEventListener("submit", async function (e) {
+    for (const [clusterId, profile] of Object.entries(SEGMENT_PROFILES)) {
+        const isMatch = Number(clusterId) === assignedCluster;
+
+        const row = document.createElement("div");
+        row.className = `segment-row${isMatch ? " matched" : ""}`;
+
+        const id = document.createElement("div");
+        id.className = "cluster-id";
+        id.textContent = clusterId;
+
+        const details = document.createElement("div");
+
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = profile.name;
+
+        const note = document.createElement("div");
+        note.className = "stats";
+        note.textContent = profile.note;
+
+        details.append(name, note);
+        row.append(id, details);
+        container.appendChild(row);
+    }
+
+    return container;
+}
+
+document.getElementById("predictForm").addEventListener("submit", async function (e) {
     e.preventDefault();
+
+    const form = e.target;
     const submitBtn = document.getElementById("submitBtn");
     const result = document.getElementById("result");
 
-    // Field names deliberately match the training data's own column names
-    // (including the units in the labels) -- the K-Means artifact's scaler
-    // was fit on columns named exactly this way.
-    const payload = {
-      "Age": parseInt(document.getElementById("age").value),
-      "Annual Income (k$)": parseFloat(document.getElementById("income").value),
-      "Spending Score (1-100)": parseFloat(document.getElementById("spending").value),
-    };
+    if (!form.reportValidity()) return;
+
+    const numericFields = [
+        "farm_size_acres",
+        "annual_yield_tonnes",
+        "income_per_acre_kes",
+        "years_farming_experience",
+        "market_access_score"
+    ];
+
+    const payload = {};
+
+    for (const field of numericFields) {
+        const value = Number(document.getElementById(field).value);
+
+        if (!Number.isFinite(value) || value < 0) {
+            result.className = "show err";
+            result.textContent = `Please enter a valid non-negative number for ${field}.`;
+            return;
+        }
+
+        payload[field] = value;
+    }
+
+    if (payload.market_access_score > 100) {
+        result.className = "show err";
+        result.textContent = "Market access score must be between 0 and 100.";
+        return;
+    }
 
     submitBtn.disabled = true;
-    submitBtn.textContent = "Assigning...";
+    submitBtn.textContent = "Predicting...";
     result.className = "";
+    result.replaceChildren();
 
     try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Server responded ${response.status}: ${text.slice(0, 200)}`);
-      }
-      const data = await response.json();
-      const profile = SEGMENT_PROFILES[data.assigned_cluster];
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
 
-      result.className = "show ok";
-      result.innerHTML =
-        `<div class="model-line">Model: ${data.model}</div>` +
-        `<div class="figure">Cluster ${data.assigned_cluster}${profile ? " -- " + profile.name : ""}</div>` +
-        (profile ? `<div style="font-size:13px;color:var(--muted);margin-bottom:4px;">${profile.note}</div>` : "") +
-        renderSegmentProfiles(data.assigned_cluster);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || `Server responded with HTTP ${response.status}`);
+        }
+
+        const cluster = Number(data.assigned_cluster);
+        const profile = SEGMENT_PROFILES[cluster];
+
+        if (!Number.isInteger(cluster) || !profile) {
+            throw new Error("The API returned an unknown cluster assignment.");
+        }
+
+        result.className = "show ok";
+
+        const modelLine = document.createElement("div");
+        modelLine.className = "model-line";
+        modelLine.textContent = `Model: ${data.model}`;
+
+        const heading = document.createElement("div");
+        heading.className = "figure";
+        heading.textContent = data.segment_name || `Cluster ${cluster}: ${profile.name}`;
+
+        const note = document.createElement("div");
+        note.style.fontSize = "13px";
+        note.style.color = "var(--muted)";
+        note.style.marginBottom = "4px";
+        note.textContent = profile.note;
+
+        const profiles = renderSegmentProfiles(cluster);
+
+        result.append(modelLine, heading, note, profiles);
+
     } catch (err) {
-      result.className = "show err";
-      result.textContent = "Request failed: " + err.message +
-        ` (is api.py running and reachable at ${API_ORIGIN} ?)`;
+        result.className = "show err";
+        result.textContent = "Request failed: " + err.message;
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Assign Segment";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Predict Segment";
     }
-  });
+});
 </script>
 </body>
 </html>

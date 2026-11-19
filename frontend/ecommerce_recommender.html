@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>E-Commerce Recommender</title>
+<title>Food Delivery Recommender</title>
 <style>
   :root {
     --accent: #ea580c;
@@ -77,45 +77,75 @@
   <div class="card">
     <a class="back-link" href="index.html">&larr; All endpoints</a>
     <span class="badge">Association Rules</span>
-    <h1>Shopping Cart Recommender</h1>
-    <p class="lead">Calls <code>POST /api/v1/models/ecommerce-recommender/predictions</code></p>
+    <h1>Food Delivery Recommender</h1>
+    <p class="lead">Calls <code>POST /api/v1/models/food-delivery-recommender/predictions</code> to recommend food items based on the contents of your cart.</p>
 
     <form id="predictForm">
-      <label for="cart">Cart SKUs <span class="hint">(comma-separated, e.g. P01, P04 or H06, H07)</span></label>
-      <input type="text" id="cart" value="P01, P04" required>
+      <label for="cart">Shopping Cart Items <span class="hint">(comma-separated item IDs, e.g. F10, F11)</span></label>
+      <input type="text" id="cart" value="F10, F11" required>
 
-      <label for="top_n">Number of Recommendations</label>
-      <input type="number" id="top_n" value="3" min="1" max="10" required>
+      <label for="top_n">Number of Recommendations <span class="hint">(1–20)</span></label>
+      <input type="number" id="top_n" value="3" min="1" max="20" step="1" required>
 
       <button type="submit" id="submitBtn">Get Recommendations</button>
     </form>
 
-    <div id="result"></div>
+    <div id="result" aria-live="polite"></div>
   </div>
 
 <script>
-  const protocol = window.location.protocol;                 // "http:", "https:", or "file:"
-  const hostname = window.location.hostname || "127.0.0.1";  // hostname is "" for a file:// page
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname || "127.0.0.1";
   const isSecure = protocol === "https:";
 
   const API_ORIGIN = `${isSecure ? "https" : "http"}://${hostname}:${isSecure ? "443" : "5000"}`;
-  const API_URL = `${API_ORIGIN}/api/v1/models/ecommerce-recommender/predictions`;
+  const API_URL = `${API_ORIGIN}/api/v1/models/food-delivery-recommender/predictions`;
 
-  // const API_URL = "http://127.0.0.1:5000/api/v1/models/ecommerce-recommender/predictions";
+  const form = document.getElementById("predictForm");
+  const cartInput = document.getElementById("cart");
+  const topNInput = document.getElementById("top_n");
+  const submitBtn = document.getElementById("submitBtn");
+  const result = document.getElementById("result");
 
-  document.getElementById("predictForm").addEventListener("submit", async function (e) {
+  function showMessage(message, type = "err") {
+    result.replaceChildren();
+    result.className = `show ${type}`;
+    result.textContent = message;
+  }
+
+  function addTextElement(parent, tag, text, className = "") {
+    const element = document.createElement(tag);
+    element.textContent = text;
+    if (className) element.className = className;
+    parent.appendChild(element);
+    return element;
+  }
+
+  form.addEventListener("submit", async function (e) {
     e.preventDefault();
-    const submitBtn = document.getElementById("submitBtn");
-    const result = document.getElementById("result");
 
-    const cartSkus = document.getElementById("cart").value
+    const cart = cartInput.value
       .split(",")
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
+      .map(item => item.trim())
+      .filter(item => item.length > 0);
+
+    const topN = Number(topNInput.value);
+
+    if (cart.length === 0) {
+      showMessage("Enter at least one food item ID.");
+      cartInput.focus();
+      return;
+    }
+
+    if (!Number.isInteger(topN) || topN < 1 || topN > 20) {
+      showMessage("Number of recommendations must be a whole number between 1 and 20.");
+      topNInput.focus();
+      return;
+    }
 
     const payload = {
-      cart: cartSkus,
-      top_n: parseInt(document.getElementById("top_n").value),
+      cart: cart,
+      top_n: topN
     };
 
     submitBtn.disabled = true;
@@ -126,30 +156,66 @@
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
+
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Server responded ${response.status}: ${text.slice(0, 200)}`);
+        throw new Error(
+          data.error || `Server responded with status ${response.status}.`
+        );
       }
-      const data = await response.json();
+
+      if (!Array.isArray(data.recommendations)) {
+        throw new Error("The API returned an unexpected recommendation format.");
+      }
+
+      result.replaceChildren();
+      result.className = "show ok";
+
+      addTextElement(result, "strong", "Food Delivery Recommendations");
+      addTextElement(result, "p", `Model: ${data.model}`);
+
+      const cartSummary = document.createElement("p");
+      cartSummary.textContent = `Cart: ${Array.isArray(data.cart) ? data.cart.join(", ") : cart.join(", ")}`;
+      result.appendChild(cartSummary);
 
       if (data.recommendations.length === 0) {
-        result.className = "show ok";
-        result.innerHTML = `Model: ${data.model}<br><br>No rules matched this cart -- try a different SKU combination.`;
+        addTextElement(
+          result,
+          "p",
+          "No recommendations matched this cart. Try a different combination of items."
+        );
       } else {
-        const items = data.recommendations.map(r => `
-          <li>
-            <span>${r.product_name} <span class="meta">(${r.sku})</span></span>
-            <span class="meta">conf ${r.confidence} &middot; lift ${r.lift}</span>
-          </li>`).join("");
-        result.className = "show ok";
-        result.innerHTML = `Model: ${data.model}<ul class="recs">${items}</ul>`;
+        const list = document.createElement("ul");
+        list.className = "recs";
+
+        data.recommendations.forEach(item => {
+          const listItem = document.createElement("li");
+
+          const details = document.createElement("span");
+          addTextElement(details, "strong", item.product_name || "Recommended item");
+          addTextElement(details, "span", ` (${item.item_id || "Unknown ID"})`, "meta");
+
+          const metrics = document.createElement("span");
+          metrics.className = "meta";
+          metrics.textContent =
+            `Confidence: ${Number(item.confidence).toFixed(3)} · Lift: ${Number(item.lift).toFixed(2)}`;
+
+          listItem.appendChild(details);
+          listItem.appendChild(metrics);
+          list.appendChild(listItem);
+        });
+
+        result.appendChild(list);
       }
+
     } catch (err) {
-      result.className = "show err";
-      result.textContent = "Request failed: " + err.message +
-        " (is api.py running on http://127.0.0.1:5000 ?)";
+      showMessage(
+        "Request failed: " + err.message +
+        " Check that api.py is running and the API is reachable."
+      );
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = "Get Recommendations";

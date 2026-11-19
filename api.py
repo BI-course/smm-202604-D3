@@ -1,26 +1,35 @@
 """
 api.py
 
-A RESTish API, built with Flask, that serves FOUR machine learning artifacts
-produced in earlier labs:
+A REST-style API built with Flask to serve four machine learning
+applications developed as part of the Business Intelligence II lab.
 
-    1. Regression       -- SME monthly revenue prediction
-    2. Classification   -- SME credit risk category
-    3. Clustering       -- Mall customer segment assignment
-    4. Association Rule -- Product recommendation from a cart
-       Mining (ARM)
+The API provides the following prediction services:
 
-The point of this file is to show you that a fitted scikit-learn /
-imbalanced-learn Pipeline is a SINGLE object that already knows how to impute
-missing values, encode categorical columns, scale numeric columns, and (for
-the classifier) apply SMOTE only during training -- never during inference.
-Because all of that preprocessing lives inside the Pipeline itself, this file
-never manually label-encodes anything, never manually engineers date features,
-and never manually reorders columns before calling .predict(). It builds a
-DataFrame straight from the incoming JSON and hands it to the pipeline as-is.
-This is the main lesson of the lab: "the pipeline IS the deployment artifact."
+    1. Regression:
+       Farm annual income prediction using a trained Linear Regression
+       pipeline.
+    2. Classification:
+       Invoice payment risk classification using a trained machine
+       learning pipeline and label encoder.
+    3. Clustering:
+       Farmer segmentation using a trained K-Means clustering pipeline.
+    4. Association Rule Mining:
+       Food item recommendations based on shopping cart contents using
+       Apriori association rules.
 
-Run this file directly to start a local development server:
+The regression, classification and clustering models use saved
+preprocessing pipelines to handle the transformations required during
+inference. This avoids manually reproducing training-time preprocessing
+when making predictions.
+
+The association rule mining endpoint uses a saved recommendation lookup
+containing the discovered association rules and food item information.
+
+The API validates incoming JSON requests, checks required features and
+returns predictions or recommendations in JSON format.
+
+Run this file directly to start the local development server:
 
     python api.py
 """
@@ -56,11 +65,16 @@ app = Flask(__name__)
 # Option C (the one actually in use here -- allow localhost/127.0.0.1 on the
 # ports our lab's frontend files are typically served from):
 CORS(app, resources={r"/api/*": {"origins": [
-    "http://localhost:5000", "http://127.0.0.1:5000",
-    "http://localhost:5500", "http://127.0.0.1:5500",
-    "https://localhost:443", "https://127.0.0.1:443",
-    "http://localhost:63342",  # VS Code Live Server extension
-    "null",  # allows opening a frontend .html file directly (file://) with no web server
+    "http://localhost:5000",
+    "http://127.0.0.1:5000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "https://localhost:443",
+    "https://127.0.0.1:443",
+    "http://localhost:63342",
+    "null",
 ]}})
 
 # -----------------------------------------------------------------------
@@ -99,100 +113,228 @@ sku_lookup = arm_artifact["sku_lookup"]
 print("All the four artifacts have been loaded. The API is ready.")
 
 
-# 1. REGRESSION -- predict monthly revenue (KES) for an SME
-
+# -----------------------------------------------------------------------
+# 1. REGRESSION -- predict annual farm income (KES)
+# -----------------------------------------------------------------------
+#
+# Endpoint:
+# POST /api/v1/models/farm-income-regressor/predictions
+#
+# Required numerical features:
+# soil_quality_score, farm_size_acres, years_farming_experience,
+# num_workers_employed, rainfall_mm, market_distance_km,
+# machinery_value_kes, fertilizer_spend_kes, pesticide_spend_kes,
+# irrigation_maintenance_cost_kes
+#
+# Required categorical features:
+# crop_type, county, irrigation_type, cooperative_member
+#
 # Sample request (cURL):
-#   curl -X POST http://127.0.0.1:5000/api/v1/models/sme-revenue-regressor/predictions \
-#        -H "Content-Type: application/json" \
-#        -d '{"sector": "Technology", "county": "Nairobi", "quarter": "Q3",
-#             "business_age_years": 4.5, "num_employees": 12,
-#             "owner_education_level": "Secondary",
-#             "monthly_marketing_spend_kes": 45000,
-#             "avg_daily_foot_traffic": null,
-#             "online_presence_score": 78.0, "loan_amount_kes": 250000,
-#             "interest_rate_pct": 14.5, "inflation_rate_pct": 6.5,
-#             "competitor_density": 5, "customer_satisfaction_score": 4.2}'
+# curl -X POST http://127.0.0.1:5000/api/v1/models/farm-income-regressor/predictions \
+#      -H "Content-Type: application/json" \
+#      -d '{"soil_quality_score":7.8,"farm_size_acres":5.5,
+#           "years_farming_experience":14,"num_workers_employed":4,
+#           "rainfall_mm":1100,"market_distance_km":12.5,
+#           "machinery_value_kes":450000,"fertilizer_spend_kes":65000,
+#           "pesticide_spend_kes":35000,
+#           "irrigation_maintenance_cost_kes":25000,
+#           "crop_type":"Horticulture","county":"Nakuru",
+#           "irrigation_type":"Drip","cooperative_member":"Yes"}'
 #
-# Sample request (PowerShell):
-#   Invoke-RestMethod -Method Post `
-#     -Uri "http://127.0.0.1:5000/api/v1/models/sme-revenue-regressor/predictions" `
-#     -ContentType "application/json" `
-#     -Body (@{sector="Technology"; county="Nairobi"; quarter="Q3";
-#              business_age_years=4.5; num_employees=12;
-#              owner_education_level="Secondary";
-#              monthly_marketing_spend_kes=45000; avg_daily_foot_traffic=$null;
-#              online_presence_score=78.0; loan_amount_kes=250000;
-#              interest_rate_pct=14.5; inflation_rate_pct=6.5;
-#              competitor_density=5; customer_satisfaction_score=4.2} | ConvertTo-Json)
+# Successful response includes:
+# predicted_annual_farm_income_kes and model.
 #
-# Note: avg_daily_foot_traffic is deliberately null for a Technology-sector
-# business (fully online -- foot traffic is structurally not applicable, not
-# missing at random). The pipeline's own imputer handles the null value; nothing
-# in this file needs to know that rule.
-
 @app.route("/api/v1/models/farm-income-regressor/predictions", methods=["POST"])
 def predict_revenue():
-    payload = request.get_json()
+    payload = request.get_json(silent=True)
 
-    # Build a one-row DataFrame straight from the JSON body. No manual
-    # label-encoding, no manual date parsing, no manual column reordering, etc. --
-    # the pipeline's ColumnTransformer already knows which columns it expects
-    # and how to preprocess each one.
-    input_row = pd.DataFrame([payload])
+    if not isinstance(payload, dict):
+        return jsonify({
+            "error": "Request body must be a valid JSON object."
+        }), 400
 
-    # Get the raw prediction from the Farm Income model
-    predicted_revenue_kes = float(regression_pipeline.predict(input_row)[0])
+    numeric_features = [
+        "soil_quality_score",
+        "farm_size_acres",
+        "years_farming_experience",
+        "num_workers_employed",
+        "rainfall_mm",
+        "market_distance_km",
+        "machinery_value_kes",
+        "fertilizer_spend_kes",
+        "pesticide_spend_kes",
+        "irrigation_maintenance_cost_kes",
+    ]
+
+    categorical_features = [
+        "crop_type",
+        "county",
+        "irrigation_type",
+        "cooperative_member",
+    ]
+
+    required_features = numeric_features + categorical_features
+
+    missing_features = [
+        feature for feature in required_features
+        if feature not in payload or payload[feature] is None
+    ]
+
+    if missing_features:
+        return jsonify({
+            "error": "Missing required features.",
+            "missing_features": missing_features,
+        }), 400
+
+    try:
+        for feature in numeric_features:
+            value = payload[feature]
+
+            if isinstance(value, bool):
+                raise ValueError
+
+            numeric_value = float(value)
+
+            if (
+                pd.isna(numeric_value)
+                or numeric_value == float("inf")
+                or numeric_value == float("-inf")
+            ):
+                raise ValueError
+
+            payload[feature] = numeric_value
+
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "Numerical features must contain valid finite numbers."
+        }), 400
+
+    for feature in categorical_features:
+        if not isinstance(payload[feature], str) or not payload[feature].strip():
+            return jsonify({
+                "error": f"{feature} must be a non-empty string."
+            }), 400
+
+        payload[feature] = payload[feature].strip()
+
+    input_row = pd.DataFrame([
+        {feature: payload[feature] for feature in required_features}
+    ])
+
+    predicted_income_kes = float(
+        regression_pipeline.predict(input_row)[0]
+    )
 
     return jsonify({
-        "predicted_monthly_revenue_kes": round(predicted_revenue_kes, 2),
-        "model": "Lasso Regressor",
+        "predicted_annual_farm_income_kes": round(predicted_income_kes, 2),
+        "model": "Farm Income Linear Regression",
     })
 
 
-# 2. CLASSIFICATION -- predict Invoice payment risk (Low/Medium/High)
-
+# -----------------------------------------------------------------------
+# 2. CLASSIFICATION -- classify invoice payment risk
+# -----------------------------------------------------------------------
+#
+# Endpoint:
+# POST /api/v1/models/invoice_payment_risk_final_pipeline/predictions
+#
+# Required numerical features:
+# invoice_amount_kes, guarantee_value_kes,
+# days_outstanding_avg_historical
+#
+# Required categorical features:
+# client_credit_rating, has_dispute_history
+#
 # Sample request (cURL):
-#   curl -X POST http://127.0.0.1:5000/api/v1/models/invoice_payment_risk_final_pipeline/predictions \
-# -H "Content-Type: application/json" \
-# -d '{
-#     "client_industry": "Manufacturing",
-#     "client_credit_rating": "Excellent",
-#     "client_company_size": "Medium",
-#     "payment_method": "Cheque",
-#     "has_dispute_history": "Yes",
-#     "collateral_or_guarantee": "Yes",
-#     "payment_terms": 90,
-#     "invoice_amount_kes": 114907,
-#     "client_relationship_years": 6.2,
-#     "prior_late_payments_count": 3,
-#     "discount_offered_pct": 1.65,
-#     "days_outstanding_avg_historical": 19.7,
-#     "guarantee_value_kes": 69619.1920055446,
-#     "economic_sector_growth_rate_pct": 1.42
-# }'
+# curl -X POST http://127.0.0.1:5000/api/v1/models/invoice_payment_risk_final_pipeline/predictions \
+#      -H "Content-Type: application/json" \
+#      -d '{"invoice_amount_kes":120000,
+#           "guarantee_value_kes":50000,
+#           "days_outstanding_avg_historical":15,
+#           "client_credit_rating":"Good",
+#           "has_dispute_history":"No"}'
 #
+# Successful response includes:
+# predicted_invoice_payment_category, class_probabilities and model.
 #
-# Note: collateral_value_kes is null here because "Working Capital" loans are
-# more often unsecured (structural missingness, not missing at random) --
-# again, the pipeline's imputer + missingness indicator already handles this
-# internally; this route does not need special code for it.
+# The label encoder converts the predicted encoded class back into
+# its original payment category.
+#
 @app.route("/api/v1/models/invoice_payment_risk_final_pipeline/predictions", methods=["POST"])
 def predict_invoice_payment_risk():
-    payload = request.get_json()
-    input_row = pd.DataFrame([payload])
+    payload = request.get_json(silent=True)
 
-    # Get the numerical prediction
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Request body must be a valid JSON object."}), 400
+
+    required_features = [
+        "invoice_amount_kes",
+        "guarantee_value_kes",
+        "days_outstanding_avg_historical",
+        "client_credit_rating",
+        "has_dispute_history",
+    ]
+
+    missing_features = [
+        feature for feature in required_features
+        if feature not in payload or payload[feature] is None
+    ]
+
+    if missing_features:
+        return jsonify({
+            "error": "Missing required features.",
+            "missing_features": missing_features,
+        }), 400
+
+    numeric_features = [
+        "invoice_amount_kes",
+        "guarantee_value_kes",
+        "days_outstanding_avg_historical",
+    ]
+
+    try:
+        for feature in numeric_features:
+            value = payload[feature]
+
+            if isinstance(value, bool):
+                raise ValueError
+
+            numeric_value = float(value)
+
+            if not np.isfinite(numeric_value):
+                raise ValueError
+
+            payload[feature] = numeric_value
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "Numerical features must contain valid finite numbers."
+        }), 400
+
+    categorical_features = [
+        "client_credit_rating",
+        "has_dispute_history",
+    ]
+
+    for feature in categorical_features:
+        if not isinstance(payload[feature], str) or not payload[feature].strip():
+            return jsonify({
+                "error": f"{feature} must be a non-empty string."
+            }), 400
+
+        payload[feature] = payload[feature].strip()
+
+    input_row = pd.DataFrame(
+        [{feature: payload[feature] for feature in required_features}]
+    )
+
     predicted_class_encoded = classification_pipeline.predict(input_row)[0]
 
-    # Convert numerical prediction back to original category
     predicted_class = label_encoder.inverse_transform(
         [predicted_class_encoded]
     )[0]
 
-    # Get prediction probabilities
     predicted_probabilities = classification_pipeline.predict_proba(input_row)[0]
 
-    # Convert numerical class labels back to original categories
     class_labels = label_encoder.inverse_transform(
         classification_pipeline.named_steps["model"].classes_
     )
@@ -207,22 +349,39 @@ def predict_invoice_payment_risk():
     })
 
 
-# 3. CLUSTERING -- assign a new farmer to one of the three segments
-
-# Sample request (cURL):
-#   curl -X POST http://127.0.0.1:5000/api/v1/models/farmer-segmenter/predictions \
-#        -H "Content-Type: application/json" \
-#        -d '{"farm_size_acres": 2.5, "annual_yield_tonnes": 8,
-#             "income_per_acre_kes": 28000, "years_farming_experience": 6,
-#             "market_access_score": 50}'
+# -----------------------------------------------------------------------
+# 3. CLUSTERING -- assign a farmer to a segment
+# -----------------------------------------------------------------------
 #
-# Note: market_access_score may be null. The saved pipeline imputes it with
-# the training median. The other four fields are required.
+# Endpoint:
+# POST /api/v1/models/farmer-segmenter/predictions
+#
+# Required features:
+# farm_size_acres, annual_yield_tonnes,
+# income_per_acre_kes, years_farming_experience
+#
+# Optional feature:
+# market_access_score
+#
+# Sample request (cURL):
+# curl -X POST http://127.0.0.1:5000/api/v1/models/farmer-segmenter/predictions \
+#      -H "Content-Type: application/json" \
+#      -d '{"farm_size_acres":3.6,
+#           "annual_yield_tonnes":9.8,
+#           "income_per_acre_kes":39000,
+#           "years_farming_experience":9,
+#           "market_access_score":53}'
+#
+# market_access_score may be omitted or null. The saved pipeline
+# handles missing values through its preprocessing steps.
+#
+# Successful response includes assigned_cluster, segment_name and model.
+#
 @app.route("/api/v1/models/farmer-segmenter/predictions", methods=["POST"])
 def predict_farmer_segment():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
-        return jsonify({"error": "Request body must be a JSON object."}), 400
+        return jsonify({"error": "Request body must be a valid JSON object."}), 400
 
     features = clustering_meta["numeric_features"]
 
@@ -233,10 +392,28 @@ def predict_farmer_segment():
         return jsonify({"error": "Missing required field(s)", "missing": missing}), 400
 
     try:
-        # reindex forces the exact column order the model was trained with
-        input_row = pd.DataFrame([payload]).reindex(columns=features).astype(float)
+        validated_payload = {}
+        for feature in features:
+            value = payload.get(feature)
+            # market_access_score is optional and may be null.
+            if feature == "market_access_score" and value is None:
+                validated_payload[feature] = np.nan
+                continue
+            if isinstance(value, bool):
+                raise ValueError
+            numeric_value = float(value)
+            if not np.isfinite(numeric_value):
+                raise ValueError
+            validated_payload[feature] = numeric_value
+        # Preserve the exact feature order expected by the trained model.
+        input_row = pd.DataFrame(
+            [validated_payload],
+            columns=features
+        )
     except (ValueError, TypeError):
-        return jsonify({"error": "All fields must be numbers."}), 400
+        return jsonify({
+            "error": "All supplied clustering features must contain valid finite numbers."
+        }), 400
 
     assigned_cluster = int(clustering_pipeline.predict(input_row)[0])
 
@@ -247,20 +424,82 @@ def predict_farmer_segment():
     })
 
 
-# 4. ASSOCIATION RULE MINING -- recommend food menu items for an order cart
-
+# -----------------------------------------------------------------------
+# 4. ASSOCIATION RULE MINING -- recommend food delivery items
+# -----------------------------------------------------------------------
+#
+# Endpoint:
+# POST /api/v1/models/food-delivery-recommender/predictions
+#
+# Required input:
+# cart: a non-empty list of food item IDs.
+#
+# Optional input:
+# top_n: number of recommendations to return (default: 3, range: 1-20).
+#
 # Sample request (cURL):
-#   curl -X POST http://127.0.0.1:5000/api/v1/models/food-delivery-recommender/predictions \
-#        -H "Content-Type: application/json" \
-#        -d '{"cart": ["F11", "F10"]}'
+# curl -X POST http://127.0.0.1:5000/api/v1/models/food-delivery-recommender/predictions \
+#      -H "Content-Type: application/json" \
+#      -d '{"cart":["F10","F11"],"top_n":3}'
+#
+# The saved Apriori association rules are used to identify recommended
+# food items that are not already present in the cart.
+#
+# Successful response includes cart, recommendations and model.
+# Each recommendation contains item_id, product_name, confidence and lift.
 #
 @app.route("/api/v1/models/food-delivery-recommender/predictions", methods=["POST"])
 def recommend_food_items():
-    payload = request.get_json()
-    cart = set(payload.get("cart", []))
-    top_n = int(payload.get("top_n", 3))
+    payload = request.get_json(silent=True)
+
+    if not isinstance(payload, dict):
+        return jsonify({
+            "error": "Request body must be a valid JSON object."
+        }), 400
+
+    if "cart" not in payload:
+        return jsonify({
+            "error": "Missing required field: cart."
+        }), 400
+
+    cart_input = payload["cart"]
+
+    if not isinstance(cart_input, list) or not cart_input:
+        return jsonify({
+            "error": "Cart must be a non-empty list of item IDs."
+        }), 400
+
+    if any(not isinstance(item, str) or not item.strip() for item in cart_input):
+        return jsonify({
+            "error": "Every cart item must be a non-empty string."
+        }), 400
+
+    cart = set(item.strip() for item in cart_input)
+
+    top_n = payload.get("top_n", 3)
+
+    if isinstance(top_n, bool):
+        return jsonify({
+            "error": "top_n must be a positive integer."
+        }), 400
+
+    try:
+        numeric_top_n = float(top_n)
+        if not np.isfinite(numeric_top_n) or not numeric_top_n.is_integer():
+            raise ValueError
+        top_n = int(numeric_top_n)
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "top_n must be a positive integer."
+        }), 400
+
+    if top_n < 1 or top_n > 20:
+        return jsonify({
+            "error": "top_n must be between 1 and 20."
+        }), 400
 
     candidates = {}
+
     for antecedent, consequent_list in recommendation_lookup.items():
         if antecedent.issubset(cart):
             for sku, confidence, lift in consequent_list:
@@ -268,7 +507,12 @@ def recommend_food_items():
                     if sku not in candidates or confidence > candidates[sku][0]:
                         candidates[sku] = (confidence, lift)
 
-    ranked = sorted(candidates.items(), key=lambda item: item[1][0], reverse=True)[:top_n]
+    ranked = sorted(
+        candidates.items(),
+        key=lambda item: item[1][0],
+        reverse=True
+    )[:top_n]
+
     recommendations = [
         {
             "item_id": str(sku),

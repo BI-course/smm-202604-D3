@@ -94,7 +94,22 @@
   }
   .endpoint-card h3 { margin: 0 0 6px; font-size: 16px; }
   .endpoint-card p { margin: 0; font-size: 13px; color: var(--muted); }
-  .endpoint-card code { font-size: 11px; color: var(--muted); }
+  .endpoint-card {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+
+  .endpoint-card p {
+    overflow-wrap: break-word;
+  }
+
+  .endpoint-card code {
+    font-size: 11px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+  }
 
   .c1 { --dot: #4f46e5; } .c1 .tag { background: #eef2ff; color: #4338ca; }
   .c2 { --dot: #0891b2; } .c2 .tag { background: #ecfeff; color: #0e7490; }
@@ -139,8 +154,8 @@
       <li><strong>NGINX</strong> (reverse proxy)
         <div style="color:var(--muted);">Terminates HTTPS, serves static files, forwards <code>/api/...</code> to Gunicorn.</div>
       </li>
-      <li><strong>Gunicorn</strong> (ASGI server)
-        <div style="color:var(--muted);">Manages worker processes and translates HTTP into Python ASGI calls.</div>
+      <li><strong>Gunicorn</strong> (WSGI server)
+        <div style="color:var(--muted);">Manages worker processes and forwards HTTP requests to the Flask application through the WSGI interface.</div>
       </li>
       <li><strong>Flask</strong> (this app, <code>api.py</code>)
         <div style="color:var(--muted);">Routes the request to the matching <code>@app.route</code> and returns a response.</div>
@@ -153,32 +168,39 @@
   <div class="endpoint-grid">
     <a class="endpoint-card c1" href="sme_revenue_regressor.html">
       <span class="tag">Regression</span>
-      <h3>SME Revenue Predictor</h3>
-      <p>Predicts monthly revenue (KES) for an SME.</p>
-      <p><code>/api/v1/models/sme-revenue-regressor/predictions</code></p>
+      <h3>Farm Annual Income Predictor</h3>
+      <p>Estimates a farm's annual income in Kenyan shillings using agricultural and operational features.</p>
+      <p><code>/api/v1/models/farm-income-regressor/predictions</code></p>
     </a>
+
     <a class="endpoint-card c2" href="sme_credit_risk_classifier.html">
       <span class="tag">Classification</span>
-      <h3>Credit Risk Classifier</h3>
-      <p>Predicts an SME loan applicant's risk category.</p>
-      <p><code>/api/v1/models/sme-credit-risk-classifier/predictions</code></p>
+      <h3>Invoice Payment Risk Classifier</h3>
+      <p>Classifies an invoice's payment outcome using its amount, guarantee, payment history and credit information.</p>
+      <p><code>/api/v1/models/invoice_payment_risk_final_pipeline/predictions</code></p>
     </a>
+
     <a class="endpoint-card c3" href="mall_customer_segmenter.html">
       <span class="tag">Clustering</span>
-      <h3>Customer Segmenter</h3>
-      <p>Assigns a mall customer to one of five segments.</p>
-      <p><code>/api/v1/models/mall-customer-segmenter/predictions</code></p>
+      <h3>Farmer Segmenter</h3>
+      <p>Groups farmers into one of three segments based on farm size, yield, income and experience.</p>
+      <p><code>/api/v1/models/farmer-segmenter/predictions</code></p>
     </a>
+
     <a class="endpoint-card c4" href="ecommerce_recommender.html">
       <span class="tag">Association Rules</span>
-      <h3>Cart Recommender</h3>
-      <p>Recommends products for a shopping cart.</p>
-      <p><code>/api/v1/models/ecommerce-recommender/predictions</code></p>
+      <h3>Food Delivery Recommender</h3>
+      <p>Recommends complementary food items using Apriori association rules and shopping cart contents.</p>
+      <p><code>/api/v1/models/food-delivery-recommender/predictions</code></p>
     </a>
   </div>
 </main>
 
-<footer>Open any card above directly in your browser -- no web server required. Remember to start <code>api.py</code> first.</footer>
+<footer>
+  Select any model above to open its frontend. Start <code>api.py</code>
+  before submitting predictions. For local development, serve the frontend
+  using <code>python -m http.server 8000</code>.
+</footer>
 
 </body>
 </html>
