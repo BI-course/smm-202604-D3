@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SME Revenue Regressor</title>
+<title>Farm Annual Income Predictor</title>
 <style>
   :root {
     --accent: #4f46e5;
@@ -112,183 +112,219 @@
   <div class="card">
     <a class="back-link" href="index.html">&larr; All endpoints</a>
     <span class="badge">Regression</span>
-    <h1>SME Monthly Revenue Predictor</h1>
-    <p class="lead">Calls <code>POST /api/v1/models/sme-revenue-regressor/predictions</code></p>
+    <h1>Farm Annual Income Predictor</h1>
+    <p class="lead">Calls <code>POST /api/v1/models/farm-income-regressor/predictions</code></p>
 
-    <form id="predictForm">
-      <div class="row">
-        <div>
-          <label for="sector">Sector</label>
-          <select id="sector" required>
-            <option>Retail</option>
-            <option>Hospitality</option>
-            <option>Agriculture</option>
-            <option>Manufacturing</option>
-            <option>Services</option>
-            <option>Technology</option>
-          </select>
-        </div>
-        <div>
-          <label for="county">County</label>
-          <select id="county" required>
-            <option>Nairobi</option>
-            <option>Mombasa</option>
-            <option>Kisumu</option>
-            <option>Nakuru</option>
-            <option>Eldoret</option>
-            <option>Other</option>
-          </select>
-        </div>
+
+  <form id="predictForm">
+    <div class="row">
+      <div>
+        <label for="soil_quality_score">Soil Quality Score</label>
+        <input type="number" id="soil_quality_score" step="any" value="7.8" required>
       </div>
-
-      <div class="row">
-        <div>
-          <label for="quarter">Quarter</label>
-          <select id="quarter" required>
-            <option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option>
-          </select>
-        </div>
-        <div>
-          <label for="owner_education_level">Owner Education</label>
-          <select id="owner_education_level" required>
-            <option>Primary</option>
-            <option selected>Secondary</option>
-            <option>Certificate</option>
-            <option>Diploma</option>
-            <option>Bachelors</option>
-            <option>Masters</option>
-            <option>Doctorate</option>
-          </select>
-        </div>
+      <div>
+        <label for="farm_size_acres">Farm Size (Acres)</label>
+        <input type="number" id="farm_size_acres" step="any" value="5.5" required>
       </div>
+    </div>
 
-      <div class="row">
-        <div>
-          <label for="business_age_years">Business Age (years)</label>
-          <input type="number" id="business_age_years" step="0.1" value="4.5" required>
-        </div>
-        <div>
-          <label for="num_employees">Number of Employees</label>
-          <input type="number" id="num_employees" value="12" required>
-        </div>
+    <div class="row">
+      <div>
+        <label for="years_farming_experience">Years Farming Experience</label>
+        <input type="number" id="years_farming_experience" step="any" value="14" required>
       </div>
-
-      <div class="row">
-        <div>
-          <label for="monthly_marketing_spend_kes">Marketing Spend (KES)</label>
-          <input type="number" id="monthly_marketing_spend_kes" value="45000" required>
-        </div>
-        <div>
-          <label for="avg_daily_foot_traffic">Foot Traffic <span class="hint">(blank if online-only)</span></label>
-          <input type="number" id="avg_daily_foot_traffic" placeholder="e.g. 60">
-        </div>
+      <div>
+        <label for="num_workers_employed">Number of Workers</label>
+        <input type="number" id="num_workers_employed" step="1" min="0" value="4" required>
       </div>
+    </div>
 
-      <div class="row">
-        <div>
-          <label for="online_presence_score">Online Presence Score (0-100)</label>
-          <input type="number" id="online_presence_score" value="78" required>
-        </div>
-        <div>
-          <label for="loan_amount_kes">Loan Amount (KES)</label>
-          <input type="number" id="loan_amount_kes" value="250000" required>
-        </div>
+    <div class="row">
+      <div>
+        <label for="rainfall_mm">Rainfall (mm)</label>
+        <input type="number" id="rainfall_mm" step="any" value="1100" required>
       </div>
-
-      <div class="row">
-        <div>
-          <label for="interest_rate_pct">Interest Rate (%)</label>
-          <input type="number" id="interest_rate_pct" step="0.1" value="14.5" required>
-        </div>
-        <div>
-          <label for="inflation_rate_pct">Inflation Rate (%)</label>
-          <input type="number" id="inflation_rate_pct" step="0.1" value="6.5" required>
-        </div>
+      <div>
+        <label for="market_distance_km">Market Distance (km)</label>
+        <input type="number" id="market_distance_km" step="any" value="12.5" required>
       </div>
+    </div>
 
-      <div class="row">
-        <div>
-          <label for="competitor_density">Competitor Density</label>
-          <input type="number" id="competitor_density" value="5" required>
-        </div>
-        <div>
-          <label for="customer_satisfaction_score">Satisfaction (1-5)</label>
-          <input type="number" id="customer_satisfaction_score" step="0.1" min="1" max="5" value="4.2" required>
-        </div>
+    <div class="row">
+      <div>
+        <label for="machinery_value_kes">Machinery Value (KES)</label>
+        <input type="number" id="machinery_value_kes" step="any" value="450000" required>
       </div>
+      <div>
+        <label for="fertilizer_spend_kes">Fertilizer Spend (KES)</label>
+        <input type="number" id="fertilizer_spend_kes" step="any" value="65000" required>
+      </div>
+    </div>
 
-      <button type="submit" id="submitBtn">Predict Monthly Revenue</button>
-    </form>
+    <div class="row">
+      <div>
+        <label for="pesticide_spend_kes">Pesticide Spend (KES)</label>
+        <input type="number" id="pesticide_spend_kes" step="any" value="35000" required>
+      </div>
+      <div>
+        <label for="irrigation_maintenance_cost_kes">Irrigation Maintenance (KES)</label>
+        <input type="number" id="irrigation_maintenance_cost_kes" step="any" value="25000" required>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="crop_type">Crop Type</label>
+        <select id="crop_type" required>
+          <option>Horticulture</option>
+          <option>Tea</option>
+          <option>Maize</option>
+          <option>Coffee</option>
+          <option>Wheat</option>
+        </select>
+      </div>
+      <div>
+        <label for="county">County</label>
+        <input type="text" id="county" value="Nakuru" required>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="irrigation_type">Irrigation Type</label>
+        <select id="irrigation_type" required>
+          <option>Drip</option>
+          <option>Manual</option>
+          <option>Rain-fed</option>
+          <option>Sprinkler</option>
+        </select>
+      </div>
+      <div>
+        <label for="cooperative_member">Cooperative Member</label>
+        <select id="cooperative_member" required>
+          <option>Yes</option>
+          <option>No</option>
+        </select>
+      </div>
+    </div>
+
+    <button type="submit" id="submitBtn">Predict Annual Farm Income</button>
+  </form>
 
     <div id="result"></div>
   </div>
 
 <script>
+const protocol = window.location.protocol;
+const hostname = window.location.hostname || "127.0.0.1";
+const isSecure = protocol === "https:";
 
-  const protocol = window.location.protocol;                 // "http:", "https:", or "file:"
-  const hostname = window.location.hostname || "127.0.0.1";  // hostname is "" for a file:// page
-  const isSecure = protocol === "https:";
+const API_ORIGIN = `${isSecure ? "https" : "http"}://${hostname}:${isSecure ? "443" : "5000"}`;
+const API_URL = `${API_ORIGIN}/api/v1/models/farm-income-regressor/predictions`;
 
-  const API_ORIGIN = `${isSecure ? "https" : "http"}://${hostname}:${isSecure ? "443" : "5000"}`;
-  const API_URL = `${API_ORIGIN}/api/v1/models/sme-revenue-regressor/predictions`;
-
-  // const API_URL = "http://127.0.0.1:5000/api/v1/models/sme-revenue-regressor/predictions";
-
-  document.getElementById("predictForm").addEventListener("submit", async function (e) {
+document.getElementById("predictForm").addEventListener("submit", async function (e) {
     e.preventDefault();
+
+    const form = e.target;
     const submitBtn = document.getElementById("submitBtn");
     const result = document.getElementById("result");
 
-    // A blank foot-traffic field means "not applicable" (e.g. a Technology
-    // business) -- send null rather than an empty string, exactly what the
-    // pipeline's own imputer already knows how to handle.
-    const footTraffic = document.getElementById("avg_daily_foot_traffic").value;
+    if (!form.reportValidity()) return;
 
-    const payload = {
-      sector: document.getElementById("sector").value,
-      county: document.getElementById("county").value,
-      quarter: document.getElementById("quarter").value,
-      owner_education_level: document.getElementById("owner_education_level").value,
-      business_age_years: parseFloat(document.getElementById("business_age_years").value),
-      num_employees: parseInt(document.getElementById("num_employees").value),
-      monthly_marketing_spend_kes: parseFloat(document.getElementById("monthly_marketing_spend_kes").value),
-      avg_daily_foot_traffic: footTraffic === "" ? null : parseFloat(footTraffic),
-      online_presence_score: parseFloat(document.getElementById("online_presence_score").value),
-      loan_amount_kes: parseFloat(document.getElementById("loan_amount_kes").value),
-      interest_rate_pct: parseFloat(document.getElementById("interest_rate_pct").value),
-      inflation_rate_pct: parseFloat(document.getElementById("inflation_rate_pct").value),
-      competitor_density: parseInt(document.getElementById("competitor_density").value),
-      customer_satisfaction_score: parseFloat(document.getElementById("customer_satisfaction_score").value),
-    };
+    const numericFields = [
+        "soil_quality_score",
+        "farm_size_acres",
+        "years_farming_experience",
+        "num_workers_employed",
+        "rainfall_mm",
+        "market_distance_km",
+        "machinery_value_kes",
+        "fertilizer_spend_kes",
+        "pesticide_spend_kes",
+        "irrigation_maintenance_cost_kes"
+    ];
+
+    const payload = {};
+
+    for (const field of numericFields) {
+        const value = Number(document.getElementById(field).value);
+
+        if (!Number.isFinite(value)) {
+            result.className = "show err";
+            result.textContent = `Please enter a valid number for ${field}.`;
+            return;
+        }
+
+        payload[field] = value;
+    }
+
+    if (!Number.isInteger(payload.num_workers_employed)) {
+        result.className = "show err";
+        result.textContent = "Number of workers must be a whole number.";
+        return;
+    }
+
+    const categoricalFields = [
+        "crop_type",
+        "county",
+        "irrigation_type",
+        "cooperative_member"
+    ];
+
+    for (const field of categoricalFields) {
+        payload[field] = document.getElementById(field).value.trim();
+
+        if (!payload[field]) {
+            result.className = "show err";
+            result.textContent = `Please provide ${field}.`;
+            return;
+        }
+    }
 
     submitBtn.disabled = true;
     submitBtn.textContent = "Predicting...";
     result.className = "";
 
     try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Server responded ${response.status}: ${text.slice(0, 200)}`);
-      }
-      const data = await response.json();
-      result.className = "show ok";
-      result.innerHTML =
-        `Model: ${data.model}` +
-        `<div class="figure">KES ${Number(data.predicted_monthly_revenue_kes).toLocaleString()}</div>`;
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.error || `Server responded with HTTP ${response.status}`
+            );
+        }
+
+        if (!Number.isFinite(Number(data.predicted_annual_farm_income_kes))) {
+            throw new Error("The API returned an invalid prediction.");
+        }
+
+        result.className = "show ok";
+        result.textContent = `Model: ${data.model}`;
+
+        const figure = document.createElement("div");
+        figure.className = "figure";
+        figure.textContent =
+            `KES ${Number(data.predicted_annual_farm_income_kes).toLocaleString("en-KE", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}`;
+
+        result.appendChild(figure);
+
     } catch (err) {
-      result.className = "show err";
-      result.textContent = "Request failed: " + err.message +
-        " (is api.py running on http://127.0.0.1:5000 ?)";
+        result.className = "show err";
+        result.textContent = "Request failed: " + err.message;
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Predict Monthly Revenue";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Predict Annual Farm Income";
     }
-  });
+});
 </script>
 </body>
 </html>
